@@ -1,6 +1,4 @@
 """Integration for Rademacher Bridge."""
-import asyncio
-from datetime import timedelta
 import logging
 
 from homepilot.api import AuthError, HomePilotApi
@@ -25,9 +23,9 @@ from homeassistant.helpers.device_registry import (
     format_mac,
 )
 from homeassistant.helpers.entity_registry import async_migrate_entries
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN
+from .state_manager import StateManager
 
 # List of platforms to support. There should be a matching .py file for each,
 # eg <cover.py> and <sensor.py>
@@ -111,32 +109,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     _LOGGER.info("Manager instance created, found %s devices", len(manager.devices))
     _LOGGER.debug("Device IDs: %s", list(manager.devices))
 
-    async def async_update_data():
-        """Fetch data from API endpoint.
-
-        This is the place to pre-process the data to lookup tables
-        so entities can quickly look up their data.
-        """
-        try:
-            # Note: asyncio.TimeoutError and aiohttp.ClientError are already
-            # handled by the data update coordinator.
-            async with asyncio.timeout(10):
-                return await manager.update_states()
-        except AuthError as err:
-            # Raising ConfigEntryAuthFailed will cancel future updates
-            # and start a config flow with SOURCE_REAUTH (async_step_reauth)
-            raise ConfigEntryAuthFailed from err
-
-    coordinator = DataUpdateCoordinator(
-        hass,
-        _LOGGER,
-        # Name of the data. For logging purposes.
-        name="rademacher",
-        update_method=async_update_data,
-        # Polling interval. Will only be polled if there are subscribers.
-        update_interval=timedelta(seconds=10),
-    )
-
     # Backward compatibility
     entry_options = {key: entry.options[key] for key in entry.options}
     if CONF_EXCLUDE not in entry.options:
@@ -149,14 +121,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if CONF_SENSOR_TYPE not in entry.options:
         entry_options[CONF_SENSOR_TYPE] = []
 
-    hass.data[DOMAIN][entry.entry_id] = (
+    state_manager = StateManager(
+        hass,
         manager,
-        coordinator,
         entry.data,
         entry_options,
     )
 
-    await coordinator.async_config_entry_first_refresh()
+    hass.data[DOMAIN][entry.entry_id] = state_manager
+    await state_manager.build_update_coordinator()
 
     entry.async_on_unload(entry.add_update_listener(update_listener))
 
