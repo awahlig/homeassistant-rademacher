@@ -1,7 +1,7 @@
 {
   "domain": "rademacher",
   "name": "Rademacher Homepilot",
-  "codeowners": ["@peribeir"],
+  "codeowners": ["@peribeir", "@awahlig"],
   "config_flow": true,
   "dhcp": [
     {"macaddress": "B01F81B*"},
@@ -12,5 +12,5 @@
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/peribeir/homeassistant-rademacher/issues",
   "requirements": ["pyrademacher==0.14.3", "asyncio>=3.4.3"],
-  "version": "2.2.1"
+  "version": "2.2.2-beta.1"
 }
