@@ -73,14 +73,12 @@ class HomePilotActuatorLightEntity(HomePilotEntity, LightEntity):
             await device.async_set_brightness(round(kwargs[ATTR_BRIGHTNESS]*100/255))
         else:
             await device.async_turn_on()
-        async with asyncio.timeout(5):
-            await self.coordinator.async_request_refresh()
+        await self.async_update_device_state()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         device: HomePilotActuator = self.coordinator.data[self.did]
-        await device.async_turn_off()
-        async with asyncio.timeout(5):
-            await self.coordinator.async_request_refresh()
+        async with self.async_state_change_context():
+            await device.async_turn_off()
 
 
 class HomePilotLightEntity(HomePilotEntity, LightEntity):
@@ -144,12 +142,10 @@ class HomePilotLightEntity(HomePilotEntity, LightEntity):
             await device.async_set_rgb(*kwargs[ATTR_RGB_COLOR])
         if ATTR_COLOR_TEMP in kwargs:
             await device.async_set_color_temp(kwargs[ATTR_COLOR_TEMP])
-        async with asyncio.timeout(5):
-            await self.coordinator.async_request_refresh()
+        await self.async_update_device_state()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         device: HomePilotActuator = self.coordinator.data[self.did]
-        await device.async_turn_off()
-        async with asyncio.timeout(5):
-            await self.coordinator.async_request_refresh()
+        async with self.async_state_change_context():
+            await device.async_turn_off()
 

@@ -99,47 +99,39 @@ class HomePilotCoverEntity(HomePilotEntity, CoverEntity):
     async def async_open_cover(self, **kwargs: Any) -> None:
         device: HomePilotCover = self.coordinator.data[self.did]
         await device.async_open_cover()
-        async with asyncio.timeout(5):
-            await self.coordinator.async_request_refresh()
+        await self.async_update_device_state()
 
     async def async_close_cover(self, **kwargs: Any) -> None:
         device: HomePilotCover = self.coordinator.data[self.did]
         await device.async_close_cover()
-        async with asyncio.timeout(5):
-            await self.coordinator.async_request_refresh()
+        await self.async_update_device_state()
 
     async def async_set_cover_position(self, **kwargs: Any) -> None:
         device: HomePilotCover = self.coordinator.data[self.did]
         await device.async_set_cover_position(kwargs[ATTR_POSITION])
-        async with asyncio.timeout(5):
-            await self.coordinator.async_request_refresh()
+        await self.async_update_device_state()
 
     async def async_stop_cover(self, **kwargs: Any) -> None:
         device: HomePilotCover = self.coordinator.data[self.did]
-        await device.async_stop_cover()
-        async with asyncio.timeout(5):
-            await self.coordinator.async_request_refresh()
+        async with self.async_state_change_context():
+            await device.async_stop_cover()
 
     async def async_open_cover_tilt(self, **kwargs: Any) -> None:
         device: HomePilotCover = self.coordinator.data[self.did]
         await device.async_open_cover_tilt()
-        async with asyncio.timeout(5):
-            await self.coordinator.async_request_refresh()
+        await self.async_update_device_state()
 
     async def async_close_cover_tilt(self, **kwargs: Any) -> None:
         device: HomePilotCover = self.coordinator.data[self.did]
         await device.async_close_cover_tilt()
-        async with asyncio.timeout(5):
-            await self.coordinator.async_request_refresh()
+        await self.async_update_device_state()
 
     async def async_set_cover_tilt_position(self, **kwargs: Any) -> None:
         device: HomePilotCover = self.coordinator.data[self.did]
         await device.async_set_cover_tilt_position(kwargs[ATTR_TILT_POSITION])
-        async with asyncio.timeout(5):
-            await self.coordinator.async_request_refresh()
+        await self.async_update_device_state()
 
     async def async_stop_cover_tilt(self, **kwargs: Any) -> None:
         device: HomePilotCover = self.coordinator.data[self.did]
-        await device.async_stop_cover_tilt()
-        async with asyncio.timeout(5):
-            await self.coordinator.async_request_refresh()
+        async with self.async_state_change_context():
+            await device.async_stop_cover_tilt()

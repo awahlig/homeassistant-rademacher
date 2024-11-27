@@ -67,16 +67,14 @@ class HomePilotClimateEntity(HomePilotEntity, ClimateEntity):
     async def async_set_hvac_mode(self, hvac_mode: str) -> None:
         device: HomePilotThermostat = self.coordinator.data[self.did]
         if device.has_auto_mode:
-            await device.async_set_auto_mode(hvac_mode == HVACMode.AUTO)
-            async with asyncio.timeout(5):
-                await self.coordinator.async_request_refresh()
+            async with self.async_state_change_context():
+                await device.async_set_auto_mode(hvac_mode == HVACMode.AUTO)
 
     async def async_set_temperature(self, **kwargs) -> None:
         device: HomePilotThermostat = self.coordinator.data[self.did]
         if device.can_set_target_temperature:
-            await device.async_set_target_temperature(kwargs["temperature"])
-            async with asyncio.timeout(5):
-                await self.coordinator.async_request_refresh()
+            async with self.async_state_change_context():
+                await device.async_set_target_temperature(kwargs["temperature"])
 
     @property
     def current_temperature(self) -> float:
