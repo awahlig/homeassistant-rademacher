@@ -4,7 +4,6 @@ import logging
 
 from homepilot.cover import HomePilotCover
 from homepilot.device import HomePilotDevice
-from homepilot.manager import HomePilotManager
 from homepilot.sensor import HomePilotSensor
 from homepilot.wallcontroller import HomePilotWallController
 
@@ -13,24 +12,23 @@ from homeassistant.components.binary_sensor import (
     BinarySensorEntity,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_EXCLUDE, CONF_SENSOR_TYPE, STATE_OFF, STATE_ON
+from homeassistant.const import CONF_EXCLUDE, CONF_SENSOR_TYPE
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN
 from .entity import HomePilotEntity
+from .state_manager import StateManager
 
 _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass, config_entry: ConfigEntry, async_add_entities):
     """Setup of entities for binary_sensor platform."""
-    entry = hass.data[DOMAIN][config_entry.entry_id]
-    manager: HomePilotManager = entry[0]
-    coordinator: DataUpdateCoordinator = entry[1]
-    exclude_devices: list[str] = entry[3][CONF_EXCLUDE]
-    ternary_contact_sensors: list[str] = entry[3][CONF_SENSOR_TYPE]
+    state_manager: StateManager = hass.data[DOMAIN][config_entry.entry_id]
+    manager = state_manager.manager
+    exclude_devices: list[str] = state_manager.entry_options[CONF_EXCLUDE]
+    ternary_contact_sensors: list[str] = state_manager.entry_options[CONF_SENSOR_TYPE]
     new_entities = []
 
     for did in manager.devices:
@@ -43,7 +41,7 @@ async def async_setup_entry(hass, config_entry: ConfigEntry, async_add_entities)
                     )
                     new_entities.append(
                         HomePilotBinarySensorEntity(
-                            coordinator=coordinator,
+                            state_manager=state_manager,
                             device=device,
                             id_suffix="rain_detect",
                             name_suffix="Rain Detection",
@@ -57,7 +55,7 @@ async def async_setup_entry(hass, config_entry: ConfigEntry, async_add_entities)
                     )
                     new_entities.append(
                         HomePilotBinarySensorEntity(
-                            coordinator=coordinator,
+                            state_manager=state_manager,
                             device=device,
                             id_suffix="sun_detect",
                             name_suffix="Sun Detection",
@@ -71,7 +69,7 @@ async def async_setup_entry(hass, config_entry: ConfigEntry, async_add_entities)
                     )
                     new_entities.append(
                         HomePilotBinarySensorEntity(
-                            coordinator=coordinator,
+                            state_manager=state_manager,
                             device=device,
                             id_suffix="wind_detect",
                             name_suffix="Wind Detection",
@@ -85,7 +83,7 @@ async def async_setup_entry(hass, config_entry: ConfigEntry, async_add_entities)
                     _LOGGER.info("Found Contact Sensor for Device ID: %s", device.did)
                     new_entities.append(
                         HomePilotBinarySensorEntity(
-                            coordinator=coordinator,
+                            state_manager=state_manager,
                             device=device,
                             id_suffix="contact_state",
                             name_suffix="Contact State",
@@ -97,7 +95,7 @@ async def async_setup_entry(hass, config_entry: ConfigEntry, async_add_entities)
                     _LOGGER.info("Found Motion Sensor for Device ID: %s", device.did)
                     new_entities.append(
                         HomePilotBinarySensorEntity(
-                            coordinator=coordinator,
+                            state_manager=state_manager,
                             device=device,
                             id_suffix="motion_sensor",
                             name_suffix="Motion Sensor",
@@ -109,7 +107,7 @@ async def async_setup_entry(hass, config_entry: ConfigEntry, async_add_entities)
                     _LOGGER.info("Found Smoke Sensor for Device ID: %s", device.did)
                     new_entities.append(
                         HomePilotBinarySensorEntity(
-                            coordinator=coordinator,
+                            state_manager=state_manager,
                             device=device,
                             id_suffix="smoke_detect",
                             name_suffix="Smoke Detection",
@@ -124,7 +122,7 @@ async def async_setup_entry(hass, config_entry: ConfigEntry, async_add_entities)
                     )
                     new_entities.append(
                         HomePilotBinarySensorEntity(
-                            coordinator=coordinator,
+                            state_manager=state_manager,
                             device=device,
                             id_suffix="blocking_detection",
                             name_suffix="Blocking Detection",
@@ -141,7 +139,7 @@ async def async_setup_entry(hass, config_entry: ConfigEntry, async_add_entities)
                     )
                     new_entities.append(
                         HomePilotBinarySensorEntity(
-                            coordinator=coordinator,
+                            state_manager=state_manager,
                             device=device,
                             id_suffix="obstacle_detection",
                             name_suffix="Obstacle Detection",
@@ -160,7 +158,7 @@ async def async_setup_entry(hass, config_entry: ConfigEntry, async_add_entities)
                         _LOGGER.info("Adding Wall Controller Button: %s", channel)
                         new_entities.append(
                             HomePilotBinarySensorEntity(
-                                coordinator=coordinator,
+                                state_manager=state_manager,
                                 device=device,
                                 id_suffix=channel,
                                 name_suffix=channel,
@@ -178,7 +176,7 @@ async def async_setup_entry(hass, config_entry: ConfigEntry, async_add_entities)
                     )
                     new_entities.append(
                         HomePilotBinarySensorEntity(
-                            coordinator=coordinator,
+                            state_manager=state_manager,
                             device=device,
                             id_suffix="battery_low",
                             name_suffix="Battery Low",
@@ -197,7 +195,7 @@ class HomePilotBinarySensorEntity(HomePilotEntity, BinarySensorEntity):
 
     def __init__(
         self,
-        coordinator,
+        state_manager: StateManager,
         device: HomePilotSensor,
         id_suffix,
         name_suffix,
@@ -210,7 +208,7 @@ class HomePilotBinarySensorEntity(HomePilotEntity, BinarySensorEntity):
         should_poll=True,
     ):
         super().__init__(
-            coordinator,
+            state_manager,
             device,
             unique_id=f"{device.uid}_f{id_suffix}",
             name=f"{device.name} {name_suffix}",

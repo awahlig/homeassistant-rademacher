@@ -1,12 +1,10 @@
 """Platform for Rademacher Bridge."""
-import asyncio
 import logging
 from typing import Any
 
 from homepilot.actuator import HomePilotActuator
 from homepilot.device import HomePilotDevice
 from homepilot.light import HomePilotLight
-from homepilot.manager import HomePilotManager
 
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
@@ -16,30 +14,29 @@ from homeassistant.components.light import (
     LightEntity,
 )
 from homeassistant.const import CONF_EXCLUDE
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN
 from .entity import HomePilotEntity
+from .state_manager import StateManager
 
 _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Setup of entities for light platform."""
-    entry = hass.data[DOMAIN][config_entry.entry_id]
-    manager: HomePilotManager = entry[0]
-    coordinator: DataUpdateCoordinator = entry[1]
-    exclude_devices: list[str] = entry[3][CONF_EXCLUDE]
+    state_manager: StateManager = hass.data[DOMAIN][config_entry.entry_id]
+    manager = state_manager.manager
+    exclude_devices: list[str] = state_manager.entry_options[CONF_EXCLUDE]
     new_entities = []
     for did in manager.devices:
         if did not in exclude_devices:
             device: HomePilotDevice = manager.devices[did]
             if isinstance(device, HomePilotActuator):
                 _LOGGER.info("Found Actuator/Light for Device ID: %s", device.did)
-                new_entities.append(HomePilotActuatorLightEntity(coordinator, device))
+                new_entities.append(HomePilotActuatorLightEntity(state_manager, device))
             if isinstance(device, HomePilotLight):
                 _LOGGER.info("Found Light for Device ID: %s", device.did)
-                new_entities.append(HomePilotLightEntity(coordinator, device))
+                new_entities.append(HomePilotLightEntity(state_manager, device))
     # If we have any new devices, add them
     if new_entities:
         async_add_entities(new_entities)
@@ -49,10 +46,10 @@ class HomePilotActuatorLightEntity(HomePilotEntity, LightEntity):
     """This class represents the Actuator/Light entity."""
 
     def __init__(
-        self, coordinator: DataUpdateCoordinator, actuator: HomePilotActuator
+        self, state_manager: StateManager, actuator: HomePilotActuator
     ) -> None:
         super().__init__(
-            coordinator,
+            state_manager,
             actuator,
             unique_id=actuator.uid,
             name=actuator.name,
@@ -72,7 +69,7 @@ class HomePilotActuatorLightEntity(HomePilotEntity, LightEntity):
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         device: HomePilotActuator = self.coordinator.data[self.did]
-        if ATTR_BRIGHTNESS in kwargs: 
+        if ATTR_BRIGHTNESS in kwargs:
             await device.async_set_brightness(round(kwargs[ATTR_BRIGHTNESS]*100/255))
         else:
             await device.async_turn_on()
@@ -90,10 +87,10 @@ class HomePilotLightEntity(HomePilotEntity, LightEntity):
     """This class represents the Light entity."""
 
     def __init__(
-        self, coordinator: DataUpdateCoordinator, light: HomePilotLight
+        self, state_manager: StateManager, light: HomePilotLight
     ) -> None:
         super().__init__(
-            coordinator,
+            state_manager,
             light,
             unique_id=light.uid,
             name=light.name,

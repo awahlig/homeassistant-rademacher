@@ -3,7 +3,6 @@ from enum import Enum
 import logging
 
 from homepilot.device import HomePilotDevice
-from homepilot.manager import HomePilotManager
 from homepilot.sensor import ContactState, HomePilotSensor
 from homepilot.thermostat import HomePilotThermostat
 
@@ -22,21 +21,20 @@ from homeassistant.const import (
     UnitOfTemperature,
 )
 from homeassistant.helpers.entity import EntityCategory
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN
 from .entity import HomePilotEntity
+from .state_manager import StateManager
 
 _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Setup of entities for sensor platform."""
-    entry = hass.data[DOMAIN][config_entry.entry_id]
-    manager: HomePilotManager = entry[0]
-    coordinator: DataUpdateCoordinator = entry[1]
-    exclude_devices: list[str] = entry[3][CONF_EXCLUDE]
-    ternary_contact_sensors: list[str] = entry[3][CONF_SENSOR_TYPE]
+    state_manager: StateManager = hass.data[DOMAIN][config_entry.entry_id]
+    manager = state_manager.manager
+    exclude_devices: list[str] = state_manager.entry_options[CONF_EXCLUDE]
+    ternary_contact_sensors: list[str] = state_manager.entry_options[CONF_SENSOR_TYPE]
     new_entities = []
     for did in manager.devices:
         if did not in exclude_devices:
@@ -48,7 +46,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                     )
                     new_entities.append(
                         HomePilotSensorEntity(
-                            coordinator=coordinator,
+                            state_manager=state_manager,
                             device=device,
                             id_suffix="temp",
                             name_suffix="Temperature",
@@ -63,7 +61,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                     )
                     new_entities.append(
                         HomePilotSensorEntity(
-                            coordinator=coordinator,
+                            state_manager=state_manager,
                             device=device,
                             id_suffix="target_temp",
                             name_suffix="Target Temperature",
@@ -78,7 +76,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                     )
                     new_entities.append(
                         HomePilotSensorEntity(
-                            coordinator=coordinator,
+                            state_manager=state_manager,
                             device=device,
                             id_suffix="wind_speed",
                             name_suffix="Wind Speed",
@@ -93,7 +91,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                     )
                     new_entities.append(
                         HomePilotSensorEntity(
-                            coordinator=coordinator,
+                            state_manager=state_manager,
                             device=device,
                             id_suffix="brightness",
                             name_suffix="Brightness",
@@ -108,7 +106,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                     )
                     new_entities.append(
                         HomePilotSensorEntity(
-                            coordinator=coordinator,
+                            state_manager=state_manager,
                             device=device,
                             id_suffix="sun_height",
                             name_suffix="Sun Height",
@@ -123,7 +121,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                     )
                     new_entities.append(
                         HomePilotSensorEntity(
-                            coordinator=coordinator,
+                            state_manager=state_manager,
                             device=device,
                             id_suffix="sun_direction",
                             name_suffix="Sun Direction",
@@ -136,7 +134,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                     _LOGGER.info("Found Contact Sensor for Device ID: %s", device.did)
                     new_entities.append(
                         HomePilotSensorEntity(
-                            coordinator=coordinator,
+                            state_manager=state_manager,
                             device=device,
                             device_class=SensorDeviceClass.ENUM.value,
                             id_suffix="contact_state",
@@ -160,7 +158,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                     )
                     new_entities.append(
                         HomePilotSensorEntity(
-                            coordinator=coordinator,
+                            state_manager=state_manager,
                             device=device,
                             id_suffix="battery_level",
                             name_suffix="Battery Level",
@@ -180,7 +178,7 @@ class HomePilotSensorEntity(HomePilotEntity, SensorEntity):
 
     def __init__(
         self,
-        coordinator,
+        state_manager: StateManager,
         device: HomePilotSensor,
         id_suffix,
         name_suffix,
@@ -194,7 +192,7 @@ class HomePilotSensorEntity(HomePilotEntity, SensorEntity):
         state_class=SensorStateClass.MEASUREMENT
     ) -> None:
         super().__init__(
-            coordinator,
+            state_manager,
             device,
             unique_id=f"{device.uid}_f{id_suffix}",
             name=f"{device.name} {name_suffix}",

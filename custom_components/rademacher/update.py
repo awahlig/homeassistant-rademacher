@@ -4,7 +4,6 @@ from typing import Any
 
 from homepilot.device import HomePilotDevice
 from homepilot.hub import HomePilotHub
-from homepilot.manager import HomePilotManager
 
 from homeassistant.components.update import (
     UpdateDeviceClass,
@@ -12,20 +11,19 @@ from homeassistant.components.update import (
     UpdateEntityFeature,
 )
 from homeassistant.const import CONF_EXCLUDE
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN
 from .entity import HomePilotEntity
+from .state_manager import StateManager
 
 _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Setup of entities for switch platform."""
-    entry = hass.data[DOMAIN][config_entry.entry_id]
-    manager: HomePilotManager = entry[0]
-    coordinator: DataUpdateCoordinator = entry[1]
-    exclude_devices: list[str] = entry[3][CONF_EXCLUDE]
+    state_manager: StateManager = hass.data[DOMAIN][config_entry.entry_id]
+    manager = state_manager.manager
+    exclude_devices: list[str] = state_manager.entry_options[CONF_EXCLUDE]
     new_entities = []
     for did in manager.devices:
         if did not in exclude_devices:
@@ -34,7 +32,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                 _LOGGER.info("Found FW Update Sensor for Device ID: %s", device.did)
                 new_entities.append(
                     HomePilotUpdateEntity(
-                        coordinator=coordinator,
+                        state_manager=state_manager,
                         device=device,
                         id_suffix="fw_update",
                         name_suffix="Firmware Update",
@@ -52,7 +50,7 @@ class HomePilotUpdateEntity(HomePilotEntity, UpdateEntity):
 
     def __init__(
         self,
-        coordinator: DataUpdateCoordinator,
+        state_manager: StateManager,
         device: HomePilotDevice,
         id_suffix,
         name_suffix,
@@ -60,7 +58,7 @@ class HomePilotUpdateEntity(HomePilotEntity, UpdateEntity):
         supported_features
     ) -> None:
         super().__init__(
-            coordinator,
+            state_manager,
             device,
             unique_id=f"{device.uid}_{id_suffix}",
             name=f"{device.name} {name_suffix}",

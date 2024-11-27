@@ -1,11 +1,9 @@
 """Platform for Rademacher Bridge."""
-import asyncio
 import logging
 from typing import Any
 
 from homepilot.cover import CoverType, HomePilotCover
 from homepilot.device import HomePilotDevice
-from homepilot.manager import HomePilotManager
 
 from homeassistant.components.cover import (
     ATTR_POSITION,
@@ -15,27 +13,26 @@ from homeassistant.components.cover import (
     CoverEntityFeature,
 )
 from homeassistant.const import CONF_EXCLUDE
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN
 from .entity import HomePilotEntity
+from .state_manager import StateManager
 
 _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Setup of entities for cover platform."""
-    entry = hass.data[DOMAIN][config_entry.entry_id]
-    manager: HomePilotManager = entry[0]
-    coordinator: DataUpdateCoordinator = entry[1]
-    exclude_devices: list[str] = entry[3][CONF_EXCLUDE]
+    state_manager: StateManager = hass.data[DOMAIN][config_entry.entry_id]
+    manager = state_manager.manager
+    exclude_devices: list[str] = state_manager.entry_options[CONF_EXCLUDE]
     new_entities = []
     for did in manager.devices:
         if did not in exclude_devices:
             device: HomePilotDevice = manager.devices[did]
             if isinstance(device, HomePilotCover):
                 _LOGGER.info("Found Cover for Device ID: %s", device.did)
-                new_entities.append(HomePilotCoverEntity(coordinator, device))
+                new_entities.append(HomePilotCoverEntity(state_manager, device))
     # If we have any new devices, add them
     if new_entities:
         async_add_entities(new_entities)
@@ -45,10 +42,10 @@ class HomePilotCoverEntity(HomePilotEntity, CoverEntity):
     """This class represents the Cover entity."""
 
     def __init__(
-        self, coordinator: DataUpdateCoordinator, cover: HomePilotCover
+        self, state_manager: StateManager, cover: HomePilotCover
     ) -> None:
         super().__init__(
-            coordinator,
+            state_manager,
             cover,
             unique_id=cover.uid,
             name=cover.name,

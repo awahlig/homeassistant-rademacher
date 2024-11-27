@@ -2,20 +2,20 @@
 import logging
 from typing import Any
 
-from homepilot.manager import HomePilotManager
 from homepilot.scenes import HomePilotScene
 
 from homeassistant.components.scene import Scene
 
 from .const import DOMAIN
+from .state_manager import StateManager
 
 _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Setup of entities for switch platform."""
-    entry = hass.data[DOMAIN][config_entry.entry_id]
-    manager: HomePilotManager = entry[0]
+    state_manager: StateManager = hass.data[DOMAIN][config_entry.entry_id]
+    manager = state_manager.manager
     new_entities = []
     for sid in manager.scenes:
         scene: HomePilotScene = manager.scenes[sid]

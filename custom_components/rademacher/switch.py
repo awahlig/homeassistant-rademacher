@@ -1,46 +1,43 @@
 """Platform for Rademacher Bridge."""
-import asyncio
 import logging
 
 from homepilot.cover import HomePilotCover
 from homepilot.device import HomePilotDevice
 from homepilot.hub import HomePilotHub
-from homepilot.manager import HomePilotManager
 from homepilot.switch import HomePilotSwitch
 
 from homeassistant.components.switch import SwitchDeviceClass, SwitchEntity
 from homeassistant.const import CONF_EXCLUDE
 from homeassistant.helpers.entity import EntityCategory
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN
 from .entity import HomePilotEntity
+from .state_manager import StateManager
 
 _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Setup of entities for switch platform."""
-    entry = hass.data[DOMAIN][config_entry.entry_id]
-    manager: HomePilotManager = entry[0]
-    coordinator: DataUpdateCoordinator = entry[1]
-    exclude_devices: list[str] = entry[3][CONF_EXCLUDE]
+    state_manager: StateManager = hass.data[DOMAIN][config_entry.entry_id]
+    manager = state_manager.manager
+    exclude_devices: list[str] = state_manager.entry_options[CONF_EXCLUDE]
     new_entities = []
     for did in manager.devices:
         if did not in exclude_devices:
             device: HomePilotDevice = manager.devices[did]
             if isinstance(device, HomePilotHub):
                 _LOGGER.info("Found Led Switch for Device ID: %s", device.did)
-                new_entities.append(HomePilotLedSwitchEntity(coordinator, device))
-                new_entities.append(HomePilotAutoUpdaeSwitchEntity(coordinator, device))
+                new_entities.append(HomePilotLedSwitchEntity(state_manager, device))
+                new_entities.append(HomePilotAutoUpdaeSwitchEntity(state_manager, device))
             if isinstance(device, HomePilotSwitch):
                 _LOGGER.info("Found Switch for Device ID: %s", device.did)
-                new_entities.append(HomePilotSwitchEntity(coordinator, device))
+                new_entities.append(HomePilotSwitchEntity(state_manager, device))
             if isinstance(device, HomePilotCover):
                 cover: HomePilotCover = device
                 if cover.has_ventilation_position_config:
                     _LOGGER.info("Found Ventilation Position Config Switch for Device ID: %s", device.did)
-                    new_entities.append(HomePilotVentilationSwitchEntity(coordinator, device))
+                    new_entities.append(HomePilotVentilationSwitchEntity(state_manager, device))
     # If we have any new devices, add them
     if new_entities:
         async_add_entities(new_entities)
@@ -50,10 +47,10 @@ class HomePilotSwitchEntity(HomePilotEntity, SwitchEntity):
     """This class represents all Switches supported."""
 
     def __init__(
-        self, coordinator: DataUpdateCoordinator, device: HomePilotDevice
+        self, state_manager: StateManager, device: HomePilotDevice
     ) -> None:
         super().__init__(
-            coordinator,
+            state_manager,
             device,
             unique_id=device.uid,
             name=device.name,
@@ -90,10 +87,10 @@ class HomePilotLedSwitchEntity(HomePilotEntity, SwitchEntity):
     """This class represents the Led Switch which controls the LEDs on the hub."""
 
     def __init__(
-        self, coordinator: DataUpdateCoordinator, device: HomePilotDevice
+        self, state_manager: StateManager, device: HomePilotDevice
     ) -> None:
         super().__init__(
-            coordinator,
+            state_manager,
             device,
             unique_id=f"{device.uid}_led_status",
             name=f"{device.name} LED Status",
@@ -131,10 +128,10 @@ class HomePilotAutoUpdaeSwitchEntity(HomePilotEntity, SwitchEntity):
     """This class represents the Led Switch which controls the LEDs on the hub."""
 
     def __init__(
-        self, coordinator: DataUpdateCoordinator, device: HomePilotDevice
+        self, state_manager: StateManager, device: HomePilotDevice
     ) -> None:
         super().__init__(
-            coordinator,
+            state_manager,
             device,
             unique_id=f"{device.uid}_auto_update",
             name=f"{device.name} Auto Update",
@@ -172,10 +169,10 @@ class HomePilotVentilationSwitchEntity(HomePilotEntity, SwitchEntity):
     """This class represents the Switch which controls Ventilation Position Mode."""
 
     def __init__(
-        self, coordinator: DataUpdateCoordinator, device: HomePilotDevice
+        self, state_manager: StateManager, device: HomePilotDevice
     ) -> None:
         super().__init__(
-            coordinator,
+            state_manager,
             device,
             unique_id=f"{device.uid}_ventilation_position_mode",
             name=f"{device.name} Ventilation Position Mode",
