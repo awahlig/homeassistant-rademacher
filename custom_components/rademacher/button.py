@@ -59,5 +59,4 @@ class HomePilotPingButtonEntity(HomePilotEntity, ButtonEntity):
     async def async_press(self) -> None:
         device: HomePilotDevice = self.coordinator.data[self.did]
         await device.async_ping()
-        async with asyncio.timeout(5):
-            await self.coordinator.async_request_refresh()
+        await self.async_update_device_state()
