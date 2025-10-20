@@ -7,7 +7,7 @@ from homepilot.manager import HomePilotManager
 from homepilot.thermostat import HomePilotThermostat
 
 from homeassistant.components.climate import ClimateEntity
-from homeassistant.components.climate.const import ClimateEntityFeature, HVACMode
+from homeassistant.components.climate.const import ClimateEntityFeature, HVACMode, HVACAction
 from homeassistant.const import CONF_EXCLUDE, UnitOfTemperature
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
@@ -109,4 +109,18 @@ class HomePilotClimateEntity(HomePilotEntity, ClimateEntity):
             ClimateEntityFeature.TARGET_TEMPERATURE
             if device.can_set_target_temperature
             else 0
+        )
+
+    @property
+    def hvac_action(self) -> str:
+        device: HomePilotThermostat = self.coordinator.data[self.did]
+        if not device.has_relais_status:
+            return None
+        if not device.relais_status:
+            return HVACAction.IDLE
+        return (
+            HVACAction.COOLING
+            if device.has_temperature and device.has_target_temperature
+            and device.temperature_value > device.target_temperature_value
+            else HVACAction.HEATING
         )
